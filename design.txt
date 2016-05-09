@@ -1,0 +1,149 @@
+Design Document: Assignment 1
+
+Joseph Campuzano
+CruzID: jcampuza
+
+CMPS 111, Sprint 2016
+
+
+1 Goal
+
+The goal of this assignment was to try to get up to speed on our C skills. Another goal was to get used to using the tools provided by FreeBSD for programming. We also get to use more system calls and are to learn how to implement a simple shell for executing commands.
+
+
+2 Assumptions
+
+Some of the assumptions for this program are that it will run on the 
+FreeBSD operating system. Every argument provided to the program is 
+assumed to be separated by a space, including some of the special 
+characters we are to support. Most error messages should be handled 
+gracefully and should not cause the shell program itself to exit, just
+like a real shell would do. The special characters we are to implement 
+are as follows
+
+exit  
+    the shell should exit when the user enters this command. It is 
+    assumed that no arguments should follow this call
+
+single commands with and without arguments
+    A command should be an executable in our path and be executed using
+    execvp. If the command does not complete then it should provide a 
+    suitable error message. This applies to all further commands.
+
+IO redirection 
+    The shell should support redirection of input and output.
+    The < flag will cause a command to take the following file as input.
+    The > and >> flag will cause the output to be appended to the named
+    file. The > will create a new file to append to, and if it already
+    exists will throw an error, while >> will cause any output to be
+    appended to the end of the specified file.
+
+Pipes 
+    The should should be able to support piping the output of one
+    command to the input of another using the | symbol.
+
+Redirecting stderr 
+    If any IO output redirection symbol is followed by a &, then stderr 
+    should also be redirected to the same file/pipe.
+
+Multiple commands separated by semicolons  
+    If any commands are separated by semicolons, then they should be
+    executed separately and in sequence. These commands should support
+    IO redirection as well.
+
+Changing Directory 
+    The shell should support changing the current working directory. 
+    When Provided no arguments it shall change to the directory that 
+    shell was first run on. 
+
+
+3 Design
+
+The approach that I will take towards the program is as follows. 
+
+First initialize the starting directory in order to facilitate changing directory.
+
+Enter a while loop that should last until Exit is typed in. 
+
+get the args that a user enters.
+
+Check for semicolons in these arguments. If they are present then execute each command up to the point where the semicolon was entered.
+
+In the execute command
+
+Check to see if the first command was an exit or a cd and execute the appropriate function
+
+Check to see if any special flags are present in the arguments supplied to execute. If there are
+setup the appropriate flags and pointers to any following commands.
+
+Execute a command using a pipe if more than one was specified. This includes setting up the necessary file descriptors, pipes and opening the appropriate files. 
+
+Execute the next command if present.
+Restore the old stdin/stdout file descriptors to the parent. 
+
+Make the parent wait for the child processes that were forked above to complete. At which point we can return to main. 
+
+
+4 Pseudocode
+
+This is the pseudocode for the myshell program. May differ slightly from the actual implementation and some details may have been abstracted out for ease of reading.
+
+procedure myshell () 
+	declare args, next
+	start_directory <- getcwd()
+	
+	loop 
+		print(prompt)
+		args <- get args
+        next -> address(args)
+        
+        loop arg in args
+            if arg = ';' then
+                execute(next through arg)
+                next -> address(args + 1)
+        execute(next)
+    end procedure
+
+
+procedure execute (args, start_directory)
+
+    if first_arg = 'cd' then change_directory()
+    if first_arg = 'exit' then exit_shell()
+    
+    # this would find each command and extract them so we could
+    # loop over them
+    commands <- extract_commands(args)
+    
+
+    loop arg in args
+        if arg = special_character
+            handle_special_character(arg)
+            # Here we would set up appropriate flags and filenames
+              as specified in the assumptions
+
+    loop command in commands
+        #if there was a pipe found in the check for special characters
+        if pipe_found
+            # this would set up the appropriate files and file descriptors
+            setup_files(command.args)
+    
+            #this would fork a child process for executing a file and assign
+            #it to a process id
+            pid <- fork() 
+            if pid == 0
+                exec(command, command.args)
+            else if pid > 0
+                #the parent should wait for any child to complete
+                wait()
+        else 
+            setup_files(command.args)
+    
+            pid <- fork()
+            if pid == 0
+                exec(command, command.args)
+            else if pid > 0
+                #the parent should wait for any child to complete
+                wait()
+    restore_old_file_descriptors()
+    end_procedure
+
