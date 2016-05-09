@@ -1,4 +1,4 @@
-<h1>cmps111 assignment 1 myshell</h1>
+cmps111 assignment 1 myshell
 
 In this assignment a simple shell is made for the freeBSD operating system.
 
